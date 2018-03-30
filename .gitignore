@@ -1,0 +1,4 @@
+.terraform
+secret
+terraform.tfvars
+terraform.tfstate*
