@@ -21,6 +21,52 @@ resource "digitalocean_droplet" "k8s_master" {
   size = "s-1vcpu-1gb"
   ssh_keys = ["${digitalocean_ssh_key.default.fingerprint}"]
   tags = ["${digitalocean_tag.kubernetes.id}","${digitalocean_tag.master.id}"]
+  connection {
+    type = "ssh"
+    user = "core"
+    private_key = "${file("./secret/id_rsa")}"
+  }
+  provisioner "file" {
+    source      = "k8s_master.sh"
+    destination = "/tmp/provision.sh"
+  }
+  provisioner "file" {
+    source      = "cluster-init.sh"
+    destination = "/tmp/cluster-init.sh"
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/provision.sh",
+      "chmod +x /tmp/cluster-init.sh",
+      "sudo /tmp/provision.sh",
+      "/tmp/cluster-init.sh",
+    ]
+  }
+}
+
+resource "digitalocean_droplet" "k8s_worker_1" {
+  image = "coreos-stable"
+  name = "k8s-worker-1"
+  private_networking = true
+  region = "ams3"
+  size = "s-1vcpu-1gb"
+  ssh_keys = ["${digitalocean_ssh_key.default.fingerprint}"]
+  tags = ["${digitalocean_tag.worker.id}","${digitalocean_tag.kubernetes.id}"]
+  connection {
+    type = "ssh"
+    user = "core"
+    private_key = "${file("./secret/id_rsa")}"
+  }
+  provisioner "file" {
+    source      = "k8s_worker.sh"
+    destination = "/tmp/provision.sh"
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/provision.sh",
+      "sudo /tmp/provision.sh",
+    ]
+  }
 }
 
 resource "digitalocean_floating_ip" "k8s_master_ip" {
@@ -31,15 +77,4 @@ resource "digitalocean_floating_ip" "k8s_master_ip" {
 resource "digitalocean_domain" "default" {
   name = "${var.k8s_hostname}"
   ip_address = "${digitalocean_floating_ip.k8s_master_ip.ip_address}"
-}
-
-resource "digitalocean_firewall" "kubernetes" {
-  name = "Kubernetes"
-  tags = ["${digitalocean_tag.kubernetes.id}"]
-  inbound_rule = [
-    { protocol = "tcp" port_range = "22" source_addresses = ["${var.admin_ip}"] },
-    { protocol = "tcp" port_range = "80" source_addresses = ["0.0.0.0/0", "::/0"] },
-    { protocol = "tcp" port_range = "443" source_addresses = ["0.0.0.0/0", "::/0"] },
-  ]
-
 }
