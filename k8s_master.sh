@@ -11,4 +11,7 @@ curl -sSL "https://raw.githubusercontent.com/kubernetes/kubernetes/${K8S_RELEASE
 mkdir -p /etc/systemd/system/kubelet.service.d
 curl -sSL "https://raw.githubusercontent.com/kubernetes/kubernetes/${K8S_RELEASE}/build/debs/10-kubeadm.conf" | sed "s:/usr/bin:/opt/bin:g" > /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 systemctl enable kubelet && systemctl start kubelet
-/opt/bin/kubeadm init --pod-network-cidr=192.168.0.0/16
+/opt/bin/kubeadm init --pod-network-cidr=10.244.0.0/16
+export KUBECONFIG=/etc/kubernetes/admin.conf
+sysctl net.bridge.bridge-nf-call-iptables=1
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml

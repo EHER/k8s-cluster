@@ -20,7 +20,7 @@ resource "digitalocean_droplet" "k8s_master" {
   region = "ams3"
   size = "s-1vcpu-1gb"
   ssh_keys = ["${digitalocean_ssh_key.default.fingerprint}"]
-  tags = ["${digitalocean_tag.kubernetes.id}","${digitalocean_tag.master.id}"]
+  tags = ["${digitalocean_tag.master.id}","${digitalocean_tag.kubernetes.id}"]
   connection {
     type = "ssh"
     user = "core"
@@ -31,15 +31,15 @@ resource "digitalocean_droplet" "k8s_master" {
     destination = "/tmp/provision.sh"
   }
   provisioner "file" {
-    source      = "cluster-init.sh"
-    destination = "/tmp/cluster-init.sh"
+    source      = "kubectl.sh"
+    destination = "/tmp/kubectl.sh"
   }
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/provision.sh",
-      "chmod +x /tmp/cluster-init.sh",
+      "chmod +x /tmp/kubectl.sh",
       "sudo /tmp/provision.sh",
-      "/tmp/cluster-init.sh",
+      "/tmp/kubectl.sh",
     ]
   }
 }
@@ -47,6 +47,31 @@ resource "digitalocean_droplet" "k8s_master" {
 resource "digitalocean_droplet" "k8s_worker_1" {
   image = "coreos-stable"
   name = "k8s-worker-1"
+  private_networking = true
+  region = "ams3"
+  size = "s-1vcpu-1gb"
+  ssh_keys = ["${digitalocean_ssh_key.default.fingerprint}"]
+  tags = ["${digitalocean_tag.worker.id}","${digitalocean_tag.kubernetes.id}"]
+  connection {
+    type = "ssh"
+    user = "core"
+    private_key = "${file("./secret/id_rsa")}"
+  }
+  provisioner "file" {
+    source      = "k8s_worker.sh"
+    destination = "/tmp/provision.sh"
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/provision.sh",
+      "sudo /tmp/provision.sh",
+    ]
+  }
+}
+
+resource "digitalocean_droplet" "k8s_worker_2" {
+  image = "coreos-stable"
+  name = "k8s-worker-2"
   private_networking = true
   region = "ams3"
   size = "s-1vcpu-1gb"
