@@ -1,6 +1,5 @@
 variable "do_token" {}
-variable "k8s_hostname" { default = "k8s.mydomain.com" }
-variable "admin_ip" { default = "192.168.1.0/24" }
+variable "k8s_domain" {}
 
 provider "digitalocean" { token = "${var.do_token}" }
 
@@ -99,7 +98,34 @@ resource "digitalocean_floating_ip" "k8s_master_ip" {
   region = "${digitalocean_droplet.k8s_master.region}"
 }
 
-resource "digitalocean_domain" "default" {
-  name = "${var.k8s_hostname}"
+resource "digitalocean_domain" "master" {
+  name = "master.${var.k8s_domain}"
   ip_address = "${digitalocean_floating_ip.k8s_master_ip.ip_address}"
+}
+
+resource "digitalocean_loadbalancer" "k8s_loadbalancer" {
+  name = "k8s-loadbalancer"
+  region = "${digitalocean_droplet.k8s_master.region}"
+  droplet_tag = "${digitalocean_tag.kubernetes.id}"
+  forwarding_rule {
+    entry_port = 80
+    entry_protocol = "http"
+    target_port = 80
+    target_protocol = "http"
+  }
+  forwarding_rule {
+    entry_port = 22
+    entry_protocol = "tcp"
+    target_port = 22
+    target_protocol = "tcp"
+  }
+  healthcheck {
+    port = 22
+    protocol = "tcp"
+  }
+}
+
+resource "digitalocean_domain" "k8s" {
+  name = "k8s.${var.k8s_domain}"
+  ip_address = "${digitalocean_loadbalancer.k8s_loadbalancer.ip}"
 }

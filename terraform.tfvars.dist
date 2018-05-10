@@ -1,3 +1,2 @@
-admin_ip = "127.0.0.1"
 do_token = ""
-k8s_hostname = "k8s.mydomain.com"
+k8s_domain = "mydomain.com"
